@@ -1,0 +1,38 @@
+Invoking GenerateIacRoleRecommendation with plan /tmp/tf-iam-rec-2411489936/tfplan.json...
+Response:
+{
+  "resourceRoles": [
+    {
+      "resourceName": "projects/gcp-project",
+      "roles": [
+        {
+          "name": "roles/run.developer",
+          "permissions": [
+            "run.services.get",
+            "run.services.create",
+            "run.services.delete",
+            "run.operations.get"
+          ]
+        },
+        {
+          "name": "roles/iam.serviceAccountUser",
+          "permissions": [
+            "iam.serviceAccounts.actAs"
+          ]
+        }
+      ]
+    }
+  ],
+  "[cloud_iam.policy_ai.iampolicyai.IacRolesAdditionalInfo.additional_info]": {
+    "resourceInfos": [
+      {
+        "resourceName": "projects/gcp-project",
+        "createResourceTypes": [
+          "google_cloud_run_v2_service"
+        ]
+      }
+    ]
+  }
+}
+Duration: 22 sec.
+
