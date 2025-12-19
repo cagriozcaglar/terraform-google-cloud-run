@@ -1,0 +1,3 @@
+TF validate result: Result: VALID
+TF plan result: Result: PLAN_SUCCESSFUL
+TFQS score result: Result: RESULT_FAIL, Value: 0.80, Absolute Score: 0.84, Semantic Score: 0.46, Syntactic Score: 1.00
