@@ -1,0 +1,233 @@
+#
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: BlueprintMetadata
+metadata:
+  name: terraform-google-cloud-run-v2
+  source:
+    repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-run-v2.git
+    sourceType: git
+spec:
+  info:
+    title: Cloud Run v2 Service
+    version: 1.0.0
+    actuationTool:
+      type: Terraform
+      flavor: HCL
+      version: ">= 1.3"
+    description:
+      tagline: A comprehensive module for deploying containerized applications on Google Cloud Run v2.
+      detailed: This module handles the deployment of a Cloud Run v2 service, including configuration for networking, security, scaling, health checks, and integration with other Google Cloud services like Secret Manager and VPC Access. It follows best practices by defaulting to a dedicated service account for least-privilege access.
+    examples:
+      - name: simple_service
+        location: examples/simple_service
+        title: Simple Cloud Run Service
+        description: A basic example of deploying a public "hello world" service.
+  content:
+    terraform:
+      source: .
+      versionConstraints:
+        - providerName: google
+          operator: "~>"
+          version: "5.30"
+    interfaces:
+      variables:
+        - name: name
+          description: The name of the Cloud Run service.
+          type: string
+          required: false
+          defaultValue: cloud-run-v2-service-example
+        - name: project_id
+          description: The Google Cloud project ID where the service will be deployed. If null, the provider project is used.
+          type: string
+          required: false
+          defaultValue: null
+        - name: location
+          description: The Google Cloud region for the Cloud Run service.
+          type: string
+          required: false
+          defaultValue: us-central1
+        - name: container_image
+          description: The container image to deploy. It is recommended to use an image from Artifact Registry, as Container Registry is deprecated.
+          type: string
+          required: false
+          defaultValue: us-docker.pkg.dev/cloudrun/container/hello
+        - name: container_command
+          description: An optional list of strings specifying the command to run within the container.
+          type: list(string)
+          required: false
+          defaultValue: []
+        - name: container_args
+          description: An optional list of strings specifying arguments to the container command.
+          type: list(string)
+          required: false
+          defaultValue: []
+        - name: container_port
+          description: The port number that the container listens on for requests.
+          type: number
+          required: false
+          defaultValue: 8080
+        - name: env_vars
+          description: A list of objects representing plaintext environment variables to set in the container. Each object should have 'name' and 'value' keys.
+          type: list(object)
+          required: false
+          defaultValue: []
+        - name: resources
+          description: A map defining the CPU and memory resource limits for the container. Billing is based on allocation, so set these to the minimum required values.
+          type: map(string)
+          required: false
+          defaultValue: '{"cpu":"1","memory":"512Mi"}'
+        - name: scaling
+          description: Configuration for the scaling behavior of the service, including min/max instances and concurrency.
+          type: object
+          required: false
+          defaultValue: {}
+        - name: cpu_idle
+          description: If true (request-based billing), CPU is only allocated during request processing. Set to false (instance-based billing) only if the service needs to perform background tasks after responding to a request.
+          type: bool
+          required: false
+          defaultValue: true
+        - name: startup_cpu_boost
+          description: If true, temporarily boosts the CPU allocation during container startup to reduce cold start latency. Recommended for latency-critical applications.
+          type: bool
+          required: false
+          defaultValue: false
+        - name: ingress
+          description: Controls who can reach the Cloud Run service. Valid values are 'INGRESS_TRAFFIC_ALL', 'INGRESS_TRAFFIC_INTERNAL_ONLY', 'INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER'.
+          type: string
+          required: false
+          defaultValue: INGRESS_TRAFFIC_ALL
+        - name: vpc_connector
+          description: The self-link or ID of the Serverless VPC Access connector to use for this service.
+          type: string
+          required: false
+          defaultValue: null
+        - name: vpc_egress
+          description: The egress setting for the VPC connector. 'PRIVATE_RANGES_ONLY' is the recommended default. Use 'ALL_TRAFFIC' only when a static egress IP via Cloud NAT is a strict requirement.
+          type: string
+          required: false
+          defaultValue: PRIVATE_RANGES_ONLY
+        - name: default_uri_disabled
+          description: If true, the default `*.run.app` URL is disabled. This is a security best practice when the service is behind a Load Balancer to prevent bypassing security controls.
+          type: bool
+          required: false
+          defaultValue: false
+        - name: allow_unauthenticated
+          description: If set to true, grants the 'roles/run.invoker' role to 'allUsers', allowing public, unauthenticated access to the service.
+          type: bool
+          required: false
+          defaultValue: false
+        - name: create_service_account
+          description: If true, a new dedicated service account is created for the service. If false, `service_account_email` must be provided. Defaults to true as a security best practice.
+          type: bool
+          required: false
+          defaultValue: true
+        - name: service_account_email
+          description: The email address of the IAM Service Account to run the service. Best practice is to use a dedicated service account with least-privilege IAM roles. This is required if `create_service_account` is false.
+          type: string
+          required: false
+          defaultValue: null
+        - name: service_account_name
+          description: The `account_id` of the service account to create, used only if `create_service_account` is true. If not provided, a name will be generated based on the service name.
+          type: string
+          required: false
+          defaultValue: null
+        - name: secret_env_vars
+          description: A list of objects for secrets to be exposed as environment variables. Each object should define 'env_var_name', 'secret_name', and 'secret_version'. The service account must have the 'Secret Manager Secret Accessor' role for each secret.
+          type: list(object)
+          required: false
+          defaultValue: []
+        - name: secret_volumes
+          description: A list of objects for secrets to be mounted as files. This is the most secure method for handling credentials. Each object must define 'mount_path', 'secret_name', and 'secret_version'. The service account must have the 'Secret Manager Secret Accessor' role for each secret.
+          type: list(object)
+          required: false
+          defaultValue: []
+        - name: startup_probe
+          description: Startup probe configuration. Crucial for services with long initialization times to prevent them from being killed before they are ready.
+          type: object
+          required: false
+          defaultValue: null
+        - name: liveness_probe
+          description: Liveness probe configuration. Essential for ensuring the service is automatically restarted if it becomes unresponsive or deadlocked.
+          type: object
+          required: false
+          defaultValue: null
+        - name: labels
+          description: A map of key-value string pairs to assign as labels to the service.
+          type: map(string)
+          required: false
+          defaultValue: {}
+        - name: service_annotations
+          description: A map of key-value string pairs to assign as annotations to the service.
+          type: map(string)
+          required: false
+          defaultValue: {}
+        - name: template_annotations
+          description: A map of key-value string pairs to assign as annotations to the revision template.
+          type: map(string)
+          required: false
+          defaultValue: {}
+      variableGroups:
+        - name: Service Identity & Location
+          description: Basic identification and location for the Cloud Run service.
+          variables: [name, project_id, location]
+        - name: Container Configuration
+          description: Define the container image and its runtime settings.
+          variables: [container_image, container_command, container_args, container_port, env_vars]
+        - name: Resource Management
+          description: Configure CPU, memory, and scaling for the service.
+          variables: [resources, scaling, cpu_idle, startup_cpu_boost]
+        - name: Security & Networking
+          description: Control network access and traffic flow.
+          variables: [ingress, vpc_connector, vpc_egress, default_uri_disabled, allow_unauthenticated]
+        - name: Service Account
+          description: Manage the IAM identity for the Cloud Run service.
+          variables: [create_service_account, service_account_email, service_account_name]
+        - name: Secrets Integration
+          description: Securely inject secrets from Secret Manager as environment variables or mounted files.
+          variables: [secret_env_vars, secret_volumes]
+        - name: Health Checks
+          description: Configure probes to monitor container health and readiness.
+          variables: [startup_probe, liveness_probe]
+        - name: Metadata
+          description: Set labels and annotations for the service and its revisions.
+          variables: [labels, service_annotations, template_annotations]
+      outputs:
+        - name: id
+          description: The fully qualified identifier of the Cloud Run service.
+        - name: latest_ready_revision
+          description: The name of the latest revision of the service that is ready to serve traffic.
+        - name: location
+          description: The location of the Cloud Run service.
+        - name: name
+          description: The name of the Cloud Run service.
+        - name: service_account_email
+          description: The email of the service account used by the service. This is the email of the created service account if `create_service_account` is true, otherwise it is the value of `service_account_email`.
+        - name: uri
+          description: The primary public URI of the Cloud Run service.
+  requirements:
+    services:
+      - run.googleapis.com
+      - iam.googleapis.com
+      - secretmanager.googleapis.com
+      - vpcaccess.googleapis.com
+    roles:
+      - level: project
+        role: roles/run.admin
+      - level: project
+        role: roles/iam.serviceAccountAdmin
+      - level: project
+        role: roles/iam.serviceAccountUser
