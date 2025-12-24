@@ -1,0 +1,223 @@
+# KRM YAML format for TF Blueprint Metadata
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: BlueprintMetadata
+
+# Basic metadata for the blueprint.
+metadata:
+  name: terraform-google-cloud-run-v2-service
+  source:
+    type: git
+    git:
+      repoLink: "https://github.com/GoogleCloudPlatform/terraform-google-cloud-run-v2-service" # This is a hypothetical URL
+      dir: /
+  version: 1.0.0
+  actuationTool:
+    type: Terraform
+    versions:
+      - ">= 1.3.0"
+
+# The main specification for the blueprint.
+spec:
+  info:
+    title: "Cloud Run v2 Service"
+    icon: "https://cdn.icon-icons.com/icons2/2107/PNG/512/file_type_terraform_icon_130125.png" # Placeholder icon
+    description:
+      tagline: "Deploy a Google Cloud Run v2 service with advanced configurations."
+      detailed: "This module deploys and manages a Google Cloud Run v2 service, with support for custom domains, VPC access, secrets management (via environment variables and volumes), and detailed startup/liveness health checks."
+    examples:
+      - name: "simple_service"
+        location: "examples/simple_service"
+        description: "A basic example of deploying a Cloud Run v2 service."
+    documentations:
+      - title: "Module README"
+        url: "https://github.com/GoogleCloudPlatform/terraform-google-cloud-run-v2-service/blob/main/README.md" # This is a hypothetical URL
+    labels:
+      - gcp
+      - cloud-run
+      - serverless
+      - container
+
+  # Defines the prerequisites for deploying the blueprint.
+  requirements:
+    roles:
+      - level: Project
+        roles:
+          - roles/run.admin
+          - roles/iam.serviceAccountUser
+          - roles/secretmanager.secretAccessor
+          - roles/vpcaccess.user
+    services:
+      - run.googleapis.com
+      - secretmanager.googleapis.com
+      - vpcaccess.googleapis.com
+
+  # Defines the user-customizable aspects of the blueprint.
+  interfaces:
+    variables:
+      - name: project_id
+        description: "The ID of the Google Cloud project."
+        type: string
+        required: true
+      - name: name
+        description: "The name of the Cloud Run service."
+        type: string
+        required: true
+      - name: location
+        description: "The Google Cloud region for the service."
+        type: string
+        required: true
+      - name: image
+        description: "The container image to deploy. Best practice is to use an image from Artifact Registry (e.g., 'us-central1-docker.pkg.dev/project/repo/image')."
+        type: string
+        required: true
+      - name: ingress
+        description: "Controls who can send requests to this service. Options are INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY, INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER."
+        type: string
+        required: false
+        default: "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+      - name: allow_unauthenticated
+        description: "If true, creates an IAM policy to allow unauthenticated public access to the service."
+        type: boolean
+        required: false
+        default: false
+      - name: service_account_email
+        description: "The email of the IAM Service Account to be used by the Cloud Run service. Using a dedicated, least-privilege service account is a security best practice."
+        type: string
+        required: false
+        default: null
+      - name: execution_environment
+        description: "The execution environment for the container. Can be 'EXECUTION_ENVIRONMENT_GEN1' or 'EXECUTION_ENVIRONMENT_GEN2'."
+        type: string
+        required: false
+        default: "EXECUTION_ENVIRONMENT_GEN2"
+      - name: container_port
+        description: "The port number that the container listens on for incoming requests."
+        type: number
+        required: false
+        default: 8080
+      - name: container_command
+        description: "The entrypoint for the container. If not specified, the container's default entrypoint is used."
+        type: list(string)
+        required: false
+        default: null
+      - name: container_args
+        description: "The arguments to the entrypoint. Corresponds to the 'CMD' instruction in a Dockerfile."
+        type: list(string)
+        required: false
+        default: null
+      - name: env_vars
+        description: "A map of plain-text environment variables to set in the container. Key is the variable name, value is the variable value."
+        type: map(string)
+        required: false
+        default: {}
+      - name: secret_env_vars
+        description: "A map of environment variables sourced from Secret Manager. The map key is the environment variable name. The value is an object with 'secret' (the secret name) and 'version'."
+        type: map(object)
+        required: false
+        default: {}
+      - name: secret_volumes
+        description: "A map of volumes to create from Secret Manager secrets. The map key is the volume name. The value is an object containing the 'secret' name and a list of 'items' to mount."
+        type: map(object)
+        required: false
+        default: {}
+      - name: volume_mounts
+        description: "A map of volume mounts for the container. The map key must correspond to a volume name defined in 'secret_volumes'. The value is the container mount path."
+        type: map(string)
+        required: false
+        default: {}
+      - name: scaling
+        description: "Scaling configuration for the service, including min/max instances and concurrency."
+        type: object
+        required: false
+        default:
+          min_instance_count: 0
+          max_instance_count: 100
+          max_instance_request_concurrency: 80
+      - name: resources
+        description: "Resource allocation for the container, including CPU/memory limits, CPU idle, and startup boost settings."
+        type: object
+        required: false
+        default:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          cpu_idle: true
+          startup_cpu_boost: false
+      - name: vpc_access
+        description: "Configuration for VPC Access Connector. The 'egress' setting defaults to 'PRIVATE_RANGES_ONLY' as a best practice."
+        type: object
+        required: false
+        default: null
+      - name: liveness_probe
+        description: "Liveness probe configuration to check if the container is responsive. If the probe fails, the container is restarted."
+        type: object
+        required: false
+        default: null
+      - name: startup_probe
+        description: "Startup probe configuration to check if the application has started successfully. Essential for services with slow start times."
+        type: object
+        required: false
+        default: null
+      - name: domain_mappings
+        description: "A list of custom domain names to map to the Cloud Run service. You must verify ownership of the domains in GCP."
+        type: list(string)
+        required: false
+        default: []
+
+    variableGroups:
+      - name: "Required Settings"
+        description: "Core settings required to deploy the Cloud Run service."
+        variables:
+          - project_id
+          - name
+          - location
+          - image
+      - name: "General Configuration"
+        description: "General service behavior and identity settings."
+        variables:
+          - ingress
+          - allow_unauthenticated
+          - service_account_email
+          - execution_environment
+      - name: "Container Configuration"
+        description: "Define how the container runs, including ports, commands, and environment."
+        variables:
+          - container_port
+          - container_command
+          - container_args
+          - env_vars
+      - name: "Scaling & Resources"
+        description: "Configure autoscaling and resource allocation for the service."
+        variables:
+          - scaling
+          - resources
+      - name: "Secrets Management"
+        description: "Securely provide secrets to your application."
+        variables:
+          - secret_env_vars
+          - secret_volumes
+          - volume_mounts
+      - name: "Networking"
+        description: "Network configuration for VPC access and custom domains."
+        variables:
+          - vpc_access
+          - domain_mappings
+      - name: "Health Checks"
+        description: "Configure probes to ensure your service is running and ready."
+        variables:
+          - startup_probe
+          - liveness_probe
+
+    outputs:
+      - name: id
+        description: "The fully qualified identifier of the Cloud Run service."
+      - name: name
+        description: "The name of the Cloud Run service."
+      - name: uri
+        description: "The default URI of the Cloud Run service."
+      - name: location
+        description: "The location where the Cloud Run service is deployed."
+      - name: latest_ready_revision_id
+        description: "The name of the latest revision of the service that is ready to serve traffic."
+      - name: domain_mapping_status
+        description: "A map of custom domain names to their mapping status, including required DNS records. You must configure these DNS records with your domain registrar."
