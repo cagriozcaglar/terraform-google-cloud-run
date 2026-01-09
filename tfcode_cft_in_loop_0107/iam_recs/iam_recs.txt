@@ -1,0 +1,53 @@
+{
+  "resourceRoles": [
+    {
+      "resourceName": "projects/gcp-project",
+      "roles": [
+        {
+          "name": "roles/iam.serviceAccountUser",
+          "permissions": [
+            "iam.serviceAccounts.actAs"
+          ]
+        },
+        {
+          "name": "roles/run.developer",
+          "permissions": [
+            "run.services.create",
+            "run.services.get",
+            "run.services.delete"
+          ]
+        },
+        {
+          "name": "roles/iam.serviceAccountAdmin",
+          "permissions": [
+            "iam.serviceAccounts.delete",
+            "iam.serviceAccounts.create"
+          ]
+        },
+        {
+          "name": "roles/iam.operationViewer",
+          "permissions": [
+            "iam.operations.get"
+          ]
+        },
+        {
+          "name": "roles/runapps.operator",
+          "permissions": [
+            "runapps.operations.get"
+          ]
+        }
+      ]
+    }
+  ],
+  "[cloud_iam.policy_ai.iampolicyai.IacRolesAdditionalInfo.additional_info]": {
+    "resourceInfos": [
+      {
+        "resourceName": "projects/gcp-project",
+        "createResourceTypes": [
+          "google_cloud_run_v2_service",
+          "google_service_account"
+        ]
+      }
+    ]
+  }
+}
