@@ -1,0 +1,7 @@
+# Grant the 'invoker_sa' the ability to call this service
+  iam_members = {
+    "roles/run.invoker" = [
+      "serviceAccount:${google_service_account.invoker_sa.email}"
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+liveness_probe = {
+    http_get_path = "/" # The hello-world container serves on the root path
+  }

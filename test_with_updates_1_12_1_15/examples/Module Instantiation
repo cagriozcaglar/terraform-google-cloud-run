@@ -1,0 +1,10 @@
+# This is the core of the example, showcasing how to use the Cloud Run module
+# with various configurations for security, secrets, networking, and health checks.
+
+module "cloud_run_service" {
+  source = "../../"
+
+  project_id = var.project_id
+  location   = var.region
+  name       = "my-app-${random_id.suffix.hex}"
+  image      = "us-run.pkg.dev/cloudrun/container/hello" # A standard hello-world image

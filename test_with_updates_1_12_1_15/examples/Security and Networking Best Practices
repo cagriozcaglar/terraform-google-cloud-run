@@ -1,0 +1,7 @@
+service_account_email = google_service_account.run_sa.email
+  ingress               = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  default_uri_disabled  = true
+  vpc_access = {
+    connector = google_vpc_access_connector.connector.id
+    egress    = "PRIVATE_RANGES_ONLY"
+  }

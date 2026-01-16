@@ -1,0 +1,3 @@
+min_instance_count = 1 # Keep one instance warm to reduce cold starts
+  max_instance_count = 5
+  startup_cpu_boost  = true

@@ -1,0 +1,210 @@
+apiVersion: blueprints.cloud.google.com/v1alpha1
+kind: TerraformBlueprint
+metadata:
+  name: terraform-google-cloud-run-v2-service
+  source:
+    type: git
+    git:
+      repo: https://github.com/GoogleCloudPlatform/terraform-google-cloud-run.git
+      dir: modules/v2-service # Placeholder directory
+  version: 1.0.0
+spec:
+  info:
+    title: Cloud Run v2 Service
+    actuationTool:
+      type: Terraform
+      version: '>= 1.3'
+    description:
+      tagline: A comprehensive and secure module to deploy a containerized application on Cloud Run v2.
+      detailed: This blueprint deploys a Google Cloud Run v2 service with fine-grained controls for networking, security, scaling, and secrets management. It follows best practices such as using dedicated service accounts, disabling default URLs for internal services, and configuring health probes.
+    labels:
+      gcp: ""
+      cloud-run: ""
+      serverless: ""
+      container: ""
+  requirements:
+    services:
+      - run.googleapis.com
+      - secretmanager.googleapis.com
+      - vpcaccess.googleapis.com
+      - iam.googleapis.com
+    roles:
+      - level: project
+        role: roles/run.admin
+      - level: project
+        role: roles/iam.serviceAccountUser
+  interface:
+    variables:
+      - name: name
+        description: The name of the Cloud Run service.
+        type: String
+        default: "cloud-run-service"
+        required: false
+      - name: project_id
+        description: The Google Cloud project ID to deploy the Cloud Run service in. If not specified, the provider's project will be used.
+        type: String
+        default: null
+        required: false
+      - name: location
+        description: The Google Cloud region to deploy the Cloud Run service in.
+        type: String
+        default: "us-central1"
+        required: false
+      - name: image
+        description: The container image to deploy. It is a best practice to use an image from Artifact Registry (e.g., 'us-central1-docker.pkg.dev/my-project/my-repo/my-image:tag') as Container Registry is deprecated.
+        type: String
+        default: "us-run.pkg.dev/cloudrun/container/hello"
+        required: false
+      - name: ingress
+        description: Controls who can reach the service. For services behind a Load Balancer, use 'INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER'. For internal-only services, use 'INGRESS_TRAFFIC_INTERNAL_ONLY'. Use 'INGRESS_TRAFFIC_ALL' for public services.
+        type: String
+        default: "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+        required: false
+      - name: default_uri_disabled
+        description: When true, disables the default '*.run.app' URL. This is a security best practice when the service is only accessed through a Load Balancer or custom domain, preventing users from bypassing security controls.
+        type: Boolean
+        default: true
+        required: false
+      - name: vpc_access
+        description: Configuration for VPC Access Connector. The 'egress' setting defaults to 'PRIVATE_RANGES_ONLY', which is optimal for accessing private resources like Cloud SQL without routing all public traffic through the VPC and requiring a NAT gateway.
+        type: Object
+        default: null
+        required: false
+      - name: service_account_email
+        description: The email of the dedicated IAM Service Account to run the service. This enforces the principle of least privilege. If not specified, the default compute service account is used.
+        type: String
+        default: null
+        required: false
+      - name: min_instance_count
+        description: The minimum number of container instances to keep running. Set to 1 or higher for latency-critical applications to reduce cold starts.
+        type: Number
+        default: 0
+        required: false
+      - name: max_instance_count
+        description: The maximum number of container instances that can be started. This is a key cost-control setting.
+        type: Number
+        default: 100
+        required: false
+      - name: max_instance_request_concurrency
+        description: The maximum number of concurrent requests that a single container instance can receive. Tune based on workload high for I/O-bound, lower for CPU-bound.
+        type: Number
+        default: 80
+        required: false
+      - name: cpu_idle
+        description: Controls CPU allocation and billing. 'true' (Request-based billing) throttles CPU when no requests are processing and is cost-effective for APIs. 'false' (Instance-based billing) keeps CPU always allocated and is required for reliable background processing.
+        type: Boolean
+        default: true
+        required: false
+      - name: startup_cpu_boost
+        description: When true, temporarily doubles the allocated CPU during container startup to reduce cold start latency.
+        type: Boolean
+        default: true
+        required: false
+      - name: container_port
+        description: The port that the container listens on for incoming requests.
+        type: Number
+        default: 8080
+        required: false
+      - name: container_command
+        description: The command to run when the container starts. If not specified, the container's default entrypoint is used.
+        type: List<String>
+        default: null
+        required: false
+      - name: container_args
+        description: The arguments to pass to the container's command.
+        type: List<String>
+        default: null
+        required: false
+      - name: container_resources_limits
+        description: A map of resource limits for the container. Set explicit limits to the minimum required size to optimize costs. Billing is based on allocation.
+        type: Map<String>
+        default:
+          cpu: "1"
+          memory: "512Mi"
+        required: false
+      - name: env_vars
+        description: A list of plaintext environment variables to set in the container.
+        type: List<Object>
+        default: []
+        required: false
+      - name: secret_env_vars
+        description: A list of environment variables sourced from Secret Manager. Each object specifies the environment variable name, the secret name (ID), and the secret version.
+        type: List<Object>
+        default: []
+        required: false
+      - name: secret_volumes
+        description: A list of secrets to mount as volumes (files) in the container. This is a secure method for injecting credentials or configuration files. Each object specifies the volume name, mount path, secret name (ID), version, and the filename.
+        type: List<Object>
+        default: []
+        required: false
+      - name: startup_probe
+        description: Health check to determine if the container has started successfully. Crucial for applications with slow startup times to avoid being killed prematurely. Set 'initial_delay_seconds' to allow sufficient time for initialization.
+        type: Object
+        default: {}
+        required: false
+      - name: liveness_probe
+        description: Health check to determine if the container is still responsive. If this probe fails, Cloud Run will restart the container instance.
+        type: Object
+        default: {}
+        required: false
+      - name: iam_members
+        description: A map of IAM roles to a list of members to grant access to the service. Example to make public `{\"roles/run.invoker\" = [\"allUsers\"]}`. Example for a specific service account `{\"roles/run.invoker\" = [\"serviceAccount:my-invoker@my-project.iam.gserviceaccount.com\"]}`.
+        type: Map<List<String>>
+        default: {}
+        required: false
+    variableGroups:
+      - name: Basic Configuration
+        description: Core settings for the Cloud Run service.
+        variables:
+          - name
+          - project_id
+          - location
+          - image
+      - name: Networking & Security
+        description: Configure network ingress, VPC access, and the service's identity.
+        variables:
+          - ingress
+          - default_uri_disabled
+          - vpc_access
+          - service_account_email
+      - name: Scaling & Performance
+        description: Control autoscaling, concurrency, and CPU allocation settings.
+        variables:
+          - min_instance_count
+          - max_instance_count
+          - max_instance_request_concurrency
+          - cpu_idle
+          - startup_cpu_boost
+      - name: Container Configuration
+        description: Define the container's runtime environment, resources, and commands.
+        variables:
+          - container_port
+          - container_command
+          - container_args
+          - container_resources_limits
+          - env_vars
+      - name: Secrets Management
+        description: Securely inject secrets as environment variables or mounted volumes.
+        variables:
+          - secret_env_vars
+          - secret_volumes
+      - name: Health Probes
+        description: Configure startup and liveness probes to ensure service reliability.
+        variables:
+          - startup_probe
+          - liveness_probe
+      - name: IAM
+        description: Manage IAM role bindings for the service.
+        variables:
+          - iam_members
+    outputs:
+      - name: service_id
+        description: The fully qualified identifier of the Cloud Run service.
+      - name: service_name
+        description: The name of the deployed Cloud Run service.
+      - name: service_uri
+        description: The default URI of the Cloud Run service.
+      - name: latest_ready_revision
+        description: The name of the latest revision that is ready to serve traffic.
+      - name: service
+        description: The full Cloud Run v2 Service resource object.
